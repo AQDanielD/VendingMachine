@@ -19,6 +19,15 @@ namespace VendingMachine
 {
     internal class Program
     {
+        //-----------------------
+        //GENERAL METHODS
+
+        public static void Menu()
+        {
+
+        }
+
+
 
         public static int IntegerValidation()
         {
@@ -41,7 +50,7 @@ namespace VendingMachine
             } while (flag == false);
 
             return id;
-        }
+        }//Infinetly loops until Integer input
 
         public static decimal DecimalValidation()
         {
@@ -64,7 +73,7 @@ namespace VendingMachine
             } while (flag == false);
 
             return id;
-        }
+        }//Infinetly loops until Decimal input
 
         public static string ReadName(string cs,int id)
         {
@@ -90,7 +99,32 @@ namespace VendingMachine
                 
             }
             return value;
-        }
+        }//Given the id and cs it will find the name of the product with the matching id in the table Prodcuts
+
+        public static void ListAllItems(string cs)
+        {
+            using (var conn = new NpgsqlConnection(cs))
+            {
+                conn.Open();
+
+                using (var cmd = new NpgsqlCommand($"SELECT * FROM Products", conn))
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var columnValue = reader["name"];
+                            Console.WriteLine(columnValue.ToString());
+                        }
+                    }
+                }
+
+            }
+        }//List all product name
+
+
+        //-----------------------
+        //ADMIN METHODS
 
         public static void InsertProduct(string cs)
         {
@@ -168,7 +202,7 @@ namespace VendingMachine
                 }
                 Console.WriteLine("Would you like to exit editor mode (Y/N)");i=Console.ReadLine();
             }
-        }
+        }//used for restocks
 
         public static void DeleteProduct(string cs)
         {
@@ -239,9 +273,9 @@ namespace VendingMachine
             }
         }
 
-        public static bool AdminValidation()
+        public static void AdminValidation()
         {
-            (bool firstValue, bool secondValue) pair = (true, false);
+            (bool firstValue, bool secondValue) pair = (false, false);
 
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("--------------------------");
@@ -251,7 +285,7 @@ namespace VendingMachine
             //-----------------------
             Console.Write("Username: ");
             string username = Console.ReadLine();
-            if (AdminUsernameFetch(connString,username))
+            if (AdminUsernameFetch(csAdmin,username))
             {
                 pair.firstValue = true;
             }
@@ -261,30 +295,53 @@ namespace VendingMachine
             }
             //-----------------------
             Console.Write("Password: ");
+
+            Console.BackgroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.White;
+
+
             int password = Console.ReadLine().GetHashCode();
-            if (AdminPasswordFetch(connString, password))
+
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = ConsoleColor.Red;
+
+            if (AdminPasswordFetch(csAdmin, password))
             {
-                pair.firstValue = true;
+                pair.secondValue = true;
             }
             else
             {
                 //CALL ON MAIN MENUE to exit Admin
             }
+            //-----------------------
             Console.WriteLine("\n--------------------------");
-            return false;
-        }
+            Console.ForegroundColor = ConsoleColor.White;
+            if (pair.firstValue == true&&pair.secondValue == true)
+            {
+                //Call on Admin Menu
+            }
+            else
+            {
+                //Unreachable
+            }
+        }//Determines if they have the correct credentials
+
+
+        //-----------------------
 
         public static string connString = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
         public static string csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
+
+        //-----------------------
 
         static void Main(string[] args)
         {
             var connString = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
             var csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
 
+            ListAllItems(connString);
 
 
-            Console.WriteLine($"{"AQ4736".GetHashCode()}");
             Console.ReadKey();
 
         }

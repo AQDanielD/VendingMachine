@@ -109,7 +109,12 @@ namespace VendingMachine
             TakeOrder(connString);
         }
 
-
+        public static void Exit()
+        {
+            Console.Clear();
+            Basket.Clear();
+            Menu();
+        }
 
         public static void TakeOrder(string cs)
         {
@@ -140,8 +145,7 @@ namespace VendingMachine
                     BasketView();
                     break:
                 case 3:
-                    Basket.Clear();
-                    Main();
+                    Exit();
             }
             Menu();
         }
@@ -165,8 +169,8 @@ namespace VendingMachine
                     //Call Method Checkout
                     break:
                 case 3:
-                    Basket.Clear();
-                    Main();
+                    Exit();
+                    break:
             }
             Menu();
         }

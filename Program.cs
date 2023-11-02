@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Security.RightsManagement;
 using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
+using System.Windows.Forms;
 
 
 //-----------
@@ -20,14 +22,148 @@ namespace VendingMachine
     internal class Program
     {
         //-----------------------
+        //Basket
+
+        public class Basket
+        {
+            public static decimal total;
+            public static List<int> items = new List<int>();
+
+            public static void Add(string cs, int id)
+            {
+                using (var conn = new NpgsqlConnection(cs))
+                {
+                    conn.Open();
+
+                    using (var cmd = new NpgsqlCommand($"SELECT price FROM Products WHERE id = {id}", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var columnValue = reader.GetDecimal(0);
+                            total += columnValue;
+                        }
+                    }
+
+                    conn.Close();
+                }
+
+                items.Add(id);
+            }
+            public static void Remove(string cs, int id)
+            {
+                using (var conn = new NpgsqlConnection(cs))
+                {
+                    conn.Open();
+
+                    using (var cmd = new NpgsqlCommand($"SELECT price FROM Products WHERE id = {id}", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var columnValue = reader.GetDecimal(0);
+                            total -= columnValue;
+                        }
+                    }
+
+                    conn.Close();
+                }
+
+                items.Remove(id);
+            }
+        }
+    
+        //-----------------------
         //GENERAL METHODS
 
         public static void Menu()
         {
+            Console.WriteLine($"Options:     ");BasketContents(connString);
+            using (var conn = new NpgsqlConnection(connString))
+            {
+                conn.Open();
 
+                using (var cmd = new NpgsqlCommand("SELECT * FROM Products", conn))
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        int id = reader.GetInt32(0);
+                        string itemName = reader.GetString(1);
+                        Console.WriteLine($"ID: {id}, Item: {itemName}");
+                    }
+                }
+            }
+            TakeOrder(connString);
         }
 
 
+
+        public static void TakeOrder(string cs)
+        {
+            Console.Write("Order ID: ");
+            List<int> items = GetItemsID(connString,"id");
+            int order = IntegerValidation();
+            while (items.Contains(order)==false)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("ERROR: invalid ID");
+                Console.ForegroundColor = ConsoleColor.White;
+                order = IntegerValidation();
+            }
+            Basket.Add(connString, order);
+            Console.Clear();
+            Menu();
+        }
+
+        public static void BasketContents(string cs)
+        {
+            switch (Basket.items.Count)
+            {
+                case 0:
+                    Console.Write("[    ]");
+                    break;
+                case 1:
+                    Console.Write($"[ {Basket.items[0]} ]");
+                    break;
+                default:
+                    Console.Write("[ ");
+                    for (int i = 0; i < Basket.items.Count; i++)
+                    {
+                        Console.Write($"{Basket.items[i]}");
+
+                        if (i < Basket.items.Count - 1)
+                        {
+                            Console.Write(", ");
+                        }
+                    }
+                    Console.Write("]");
+                    break;
+            }
+        }
+
+        public static List<int> GetItemsID(string cs,string column)
+        {
+            List<int> items = new List<int>();
+            using (var conn = new NpgsqlConnection(cs))
+            {
+                conn.Open();
+
+                using (var cmd = new NpgsqlCommand($"SELECT * FROM Products", conn))
+                {
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var columnValue = reader.GetInt32(0);
+                            items.Add(columnValue);
+                        }
+                    }
+                }
+
+            }
+            return items;
+        }
 
         public static int IntegerValidation()
         {
@@ -121,6 +257,19 @@ namespace VendingMachine
 
             }
         }//List all product name
+
+        public static int RowCount(string cs)
+        {
+            int rows = 0;
+            using(var conn = new NpgsqlConnection(cs))
+            {
+                using(var cmd = new NpgsqlCommand("SELECT COUNT(*) FROM Products",conn))
+                {
+                    rows = (int)cmd.ExecuteScalar();
+                }
+            }
+            return rows;
+        }
 
 
         //-----------------------
@@ -339,7 +488,7 @@ namespace VendingMachine
             var connString = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
             var csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
 
-            ListAllItems(connString);
+            Menu();
 
 
             Console.ReadKey();

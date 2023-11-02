@@ -90,7 +90,7 @@ namespace VendingMachine
 
         public static void Menu()
         {
-            Console.WriteLine($"Options:     ");BasketContents(connString);
+            Console.Write($"Options:     ");BasketContents(connString);
             using (var conn = new NpgsqlConnection(connString))
             {
                 conn.Open();
@@ -102,7 +102,7 @@ namespace VendingMachine
                     {
                         int id = reader.GetInt32(0);
                         string itemName = reader.GetString(1);
-                        int stock = reader.GetInt32(3)
+                        int stock = reader.GetInt32(3);
                         Console.WriteLine($"ID: {id}, Item: {itemName}, Stock: {stock}");
                     }
                 }
@@ -136,20 +136,21 @@ namespace VendingMachine
             Console.WriteLine("2 - Basket");
             Console.WriteLine("3 - Exit");
             Console.Write("--> ");
-            int Choice = int.Parse(IntegerValidation());
+            int Choice = IntegerValidation();
             switch (Choice)
             {
                 case 4736:
                     AdminValidation();
-                    break:
+                    break;
                 case 1:
                     Menu();
-                    break:
+                    break;
                 case 2:
                     BasketView();
-                    break:
+                    break;
                 case 3:
                     Exit();
+                    break;
             }
             Menu();
         }
@@ -164,21 +165,21 @@ namespace VendingMachine
             Console.WriteLine("2 - Checkout");
             Console.WriteLine("3 - Remove Item");
             Console.WriteLine("4 - Exit");
-            int Choice = int.Parse(IntegerValidation());
+            int Choice = IntegerValidation();
             switch (Choice)
             {
                 case 1:
                     Menu();
-                    break:
+                    break;
                 case 2:
                     Checkout();
-                    break:
+                    break;
                 case 3:
                     RemoveItem();
-                    break:
+                    break;
                 default:
                     Exit();
-                    break:
+                    break;
             }
             Menu();
         }
@@ -187,29 +188,53 @@ namespace VendingMachine
         {
             Console.Clear();
             Console.WriteLine($"Total: £{Basket.total}");
-            BasketContents();
+            BasketContents(connString);
             Console.Write("1 - Pay\n2 - Basket\n3 - Exit\n");
             Console.Write("--> "); int choice = IntegerValidation();
             switch (choice)
             {
                 case 1:
-                    //Call Pay();
-                    break:
+                    Pay(); ;
+                    break;
                 case 2:
                     BasketView();
-                    break:
+                    break;
                 case 3:
                     Exit();
-                    break:
+                    break;
                 default:
                     Checkout();
-                    break:
+                    break;
             }
         }
 
         public static void Pay()
         {
+            Console.WriteLine("Enter Coins: ");
+            while (Basket.total > 0)
+            {
+                try
+                {
+                    decimal coin = decimal.Parse(Console.ReadLine());
+                    Basket.total -= coin;
+                }
+                catch
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Rejected");
+                        Console.ForegroundColor = ConsoleColor.White;
+                }
+            }
 
+            for (int i = 0; i > Basket.items.Count(); i++)
+            {
+                PurchaseProduct(connString, Basket.items[i]);
+            }
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Returned --> £{Basket.total}");
+            Console.ForegroundColor = ConsoleColor.White;
+
+            Exit();
         }
 
         public static void RemoveItem()
@@ -249,8 +274,22 @@ namespace VendingMachine
                             Console.Write(", ");
                         }
                     }
-                    Console.Write("]");
+                    Console.Write("]\n");
                     break;
+            }
+        }
+
+        public static void PurchaseProduct(string cs, int id)
+        {
+            int stock = GetStock(connString, id);
+            using(var conn = new NpgsqlConnection(cs))
+            {
+                using(var cmd = new NpgsqlCommand("UPDATE Products SET stock = @value1 WHERE id = @value2"))
+                {
+                    cmd.Parameters.AddWithValue("value1", stock-1);
+                    cmd.Parameters.AddWithValue("value2", id);
+                }
+                conn.Close();
             }
         }
 
@@ -326,6 +365,8 @@ namespace VendingMachine
         public static string ReadName(string cs,int id)
         {
             var value = "";
+            using (var conn = new NpgsqlConnection(cs))
+            {
                 using (var cmd = new NpgsqlCommand($"SELECT * FROM Products WHERE id = {id}", conn))
                 {
                     using (var reader = cmd.ExecuteReader())
@@ -340,6 +381,7 @@ namespace VendingMachine
                         }
                     }
                 }
+            }
             return value;
         }//Given the id and cs it will find the name of the product with the matching id in the table Prodcuts
 
@@ -379,20 +421,25 @@ namespace VendingMachine
 
         public static int GetStock(string cs, int id)
         {
-            using (var cmd = new NpgsqlCommand($"SELECT * FROM Products WHERE id = {id}", conn))
+            int value = 0;
+            using (var conn = new NpgsqlConnection(cs))
             {
-                using (var reader = cmd.ExecuteReader())
+                using (var cmd = new NpgsqlCommand($"SELECT * FROM Products WHERE id = {id}", conn))
                 {
-                    while (reader.Read())
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        // Access and process the data from the query result
-                        var columnValue = reader.GetInt32(3);
-                        // Perform operations with the data
-                        value = columnValue.ToString();
+                        while (reader.Read())
+                        {
+                            // Access and process the data from the query result
+                            int columnValue = reader.GetInt32(3);
+                            // Perform operations with the data
+                            value = columnValue;
+                        }
                     }
                 }
+                conn.Close();
             }
-            conn.Close();
+            return value;
         }
 
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -29,6 +29,13 @@ namespace VendingMachine
             public static decimal total;
             public static List<int> items = new List<int>();
 
+            public static void Show()
+            {
+                for(int i = 0; i < items.Count();i++)
+                {
+                    Console.WriteLine($"ID: {items[i]}, Product: {ReadName(connString, items[i])}");
+                }
+            }
             public static void Add(string cs, int id)
             {
                 using (var conn = new NpgsqlConnection(cs))
@@ -70,6 +77,11 @@ namespace VendingMachine
                 }
 
                 items.Remove(id);
+            }
+            public static void Clear()
+            {
+                total = 0;
+                items.Clear();
             }
         }
     
@@ -113,7 +125,55 @@ namespace VendingMachine
             }
             Basket.Add(connString, order);
             Console.Clear();
+            Console.WriteLine("Options:");
+            Console.WriteLine("1 - Menu");
+            Console.WriteLine("2 - Basket");
+            Console.WriteLine("3 - Exit");
+            Console.Write("--> ");
+            int Choice = int.Parse(IntegerValidation());
+            switch (Choice)
+            {
+                case 1:
+                    Menu();
+                    break:
+                case 2:
+                    BasketView();
+                    break:
+                case 3:
+                    Basket.Clear();
+                    Main();
+            }
             Menu();
+        }
+
+        public static void BasketView()
+        {
+            Console.Clear();
+            Console.WriteLine($"Basket: £{Basket.total}");
+            Basket.Show();
+            Console.WriteLine("Options:");
+            Console.WriteLine("1 - Menu");
+            Console.WriteLine("2 - Checkout");
+            Console.WriteLine("3 - Exit");
+            int Choice = int.Parse(IntegerValidation());
+            switch (Choice)
+            {
+                case 1:
+                    Menu();
+                    break:
+                case 2:
+                    //Call Method Checkout
+                    break:
+                case 3:
+                    Basket.Clear();
+                    Main();
+            }
+            Menu();
+        }
+
+        public static void Checkout()
+        {
+
         }
 
         public static void BasketContents(string cs)
@@ -483,7 +543,7 @@ namespace VendingMachine
 
         //-----------------------
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var connString = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
             var csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";

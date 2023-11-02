@@ -13,6 +13,19 @@ using System.Windows.Forms;
 using Npgsql;//"Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true"
 //-----------
 
+//Type 4736 on Menu to access Admin
+
+//Very bad Host for DB
+/*
+ * Table name --> Products, Admins
+ * 
+ * Prodcuts --> [int PRIMARY id, string name, int stock, decimal price]
+ * Admins --> [int PRIMARY id, string username, TIMESPAMTZ lastsignin, VARCHAR Key] 
+ * 
+ * 
+ * 
+ */
+
 //Username: Dan
 //Password: AQ4736
 
@@ -465,6 +478,8 @@ namespace VendingMachine
             }
 
         }
+
+
 
         public static void UpdateValues(string cs)
         {

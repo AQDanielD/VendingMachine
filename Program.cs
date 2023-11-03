@@ -115,8 +115,8 @@ namespace VendingMachine
                     {
                         int id = reader.GetInt32(0);
                         string itemName = reader.GetString(1);
-                        int stock = reader.GetInt32(3);
-                        Console.WriteLine($"ID: {id}, Item: {itemName}, Stock: {stock}");
+                        int stock = reader.GetInt32(2);
+                        Console.WriteLine($"\nID: {id}, Item: {itemName}, Stock: {stock}");
                     }
                 }
             }
@@ -137,6 +137,10 @@ namespace VendingMachine
             int order = IntegerValidation();
             while (items.Contains(order)==false&&GetStock(connString,order)==0)
             {
+                if (order == 4736)
+                {
+                    AdminValidation();
+                }
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("ERROR: invalid ID");
                 Console.ForegroundColor = ConsoleColor.White;
@@ -152,9 +156,6 @@ namespace VendingMachine
             int Choice = IntegerValidation();
             switch (Choice)
             {
-                case 4736:
-                    AdminValidation();
-                    break;
                 case 1:
                     Menu();
                     break;
@@ -202,12 +203,12 @@ namespace VendingMachine
             Console.Clear();
             Console.WriteLine($"Total: £{Basket.total}");
             BasketContents(connString);
-            Console.Write("1 - Pay\n2 - Basket\n3 - Exit\n");
+            Console.WriteLine("1 - Pay\n2 - Basket\n3 - Exit\n");
             Console.Write("--> "); int choice = IntegerValidation();
             switch (choice)
             {
                 case 1:
-                    Pay(); ;
+                    Pay();
                     break;
                 case 2:
                     BasketView();
@@ -239,14 +240,14 @@ namespace VendingMachine
                 }
             }
 
-            for (int i = 0; i > Basket.items.Count(); i++)
+            for (int i = 0; i < Basket.items.Count(); i++)
             {
                 PurchaseProduct(connString, Basket.items[i]);
             }
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"Returned --> £{Basket.total}");
             Console.ForegroundColor = ConsoleColor.White;
-
+            Console.ReadKey();
             Exit();
         }
 
@@ -292,19 +293,32 @@ namespace VendingMachine
             }
         }
 
-        public static void PurchaseProduct(string cs, int id)
+        public static void PurchaseProduct(string connString, int id)
         {
-            int stock = GetStock(connString, id);
-            using(var conn = new NpgsqlConnection(cs))
+            int currentStock = GetStock(connString, id);
+
+            if (currentStock > 0)
             {
-                using(var cmd = new NpgsqlCommand("UPDATE Products SET stock = @value1 WHERE id = @value2"))
+                using (var conn = new NpgsqlConnection(connString))
                 {
-                    cmd.Parameters.AddWithValue("value1", stock-1);
-                    cmd.Parameters.AddWithValue("value2", id);
+                    conn.Open();
+
+                    using (var cmd = new NpgsqlCommand("UPDATE Products SET stock = @value1 WHERE id = @value2", conn))
+                    {
+
+                        cmd.Parameters.AddWithValue("value1", currentStock - 1);
+                        cmd.Parameters.AddWithValue("value2", id);
+
+                        cmd.ExecuteNonQuery();
+                    }
                 }
-                conn.Close();
+            }
+            else
+            {
+
             }
         }
+
 
         public static List<int> GetItemsID(string cs,string column)
         {
@@ -380,6 +394,7 @@ namespace VendingMachine
             var value = "";
             using (var conn = new NpgsqlConnection(cs))
             {
+                conn.Open();
                 using (var cmd = new NpgsqlCommand($"SELECT * FROM Products WHERE id = {id}", conn))
                 {
                     using (var reader = cmd.ExecuteReader())
@@ -388,12 +403,12 @@ namespace VendingMachine
                         {
                             // Access and process the data from the query result
                             var columnValue = reader["name"];
-                            conn.Close();
                             // Perform operations with the data
                             value = columnValue.ToString();
                         }
                     }
                 }
+                conn.Close();
             }
             return value;
         }//Given the id and cs it will find the name of the product with the matching id in the table Prodcuts
@@ -437,6 +452,7 @@ namespace VendingMachine
             int value = 0;
             using (var conn = new NpgsqlConnection(cs))
             {
+                conn.Open();
                 using (var cmd = new NpgsqlCommand($"SELECT * FROM Products WHERE id = {id}", conn))
                 {
                     using (var reader = cmd.ExecuteReader())
@@ -444,7 +460,7 @@ namespace VendingMachine
                         while (reader.Read())
                         {
                             // Access and process the data from the query result
-                            int columnValue = reader.GetInt32(3);
+                            int columnValue = reader.GetInt16(2);
                             // Perform operations with the data
                             value = columnValue;
                         }
@@ -479,7 +495,27 @@ namespace VendingMachine
 
         }
 
-
+        public static void AdminMenu()
+        {
+            Console.Clear();
+            Console.Write("1 - Insert\n2 - Update\n3 - Delete\n4 - Exit\n");
+            Console.Write("--> "); int choice = IntegerValidation();
+            switch (choice)
+            {
+                case 1:
+                    InsertProduct(connString);
+                    break;
+                case 2:
+                    UpdateValues(connString);
+                    break;
+                case 3:
+                    DeleteProduct(connString);
+                    break;
+                case 4:
+                    Exit();
+                    break;
+            }
+        }
 
         public static void UpdateValues(string cs)
         {
@@ -562,25 +598,19 @@ namespace VendingMachine
             {
                 conn.Open();
 
-                using (var cmd = new NpgsqlCommand("SELECT * FROM Admins WHERE username = @username", conn))
+                using (var cmd = new NpgsqlCommand("SELECT COUNT(*) FROM Admins WHERE username = @username", conn))
                 {
                     cmd.Parameters.AddWithValue("@username", username);
 
-                    int count = (int)cmd.ExecuteScalar();
+                    // Use ExecuteScalar to get the count of records.
+                    int count = Convert.ToInt32(cmd.ExecuteScalar());
 
-                    if (count > 0)
-                    {
-
-                        return true;
-                    }
-                    else
-                    {
-
-                        return false;
-                    }
+                    // Check if the count is greater than 0 to determine if the username exists.
+                    return count > 0;
                 }
             }
         }
+
 
         public static bool AdminPasswordFetch(string cs, int password)
         {
@@ -588,22 +618,13 @@ namespace VendingMachine
             {
                 conn.Open();
 
-                using (var cmd = new NpgsqlCommand("SELECT * FROM Admins WHERE password = @password", conn))
+                using (var cmd = new NpgsqlCommand("SELECT * FROM Admins WHERE key = @password", conn))
                 {
                     cmd.Parameters.AddWithValue("@password", password);
 
-                    int count = (int)cmd.ExecuteScalar();
+                    int count = Convert.ToInt32(cmd.ExecuteScalar());
 
-                    if (count > 0)
-                    {
-
-                        return true;
-                    }
-                    else
-                    {
-
-                        return false;
-                    }
+                    return count > 0;
                 }
             }
         }
@@ -653,7 +674,7 @@ namespace VendingMachine
             Console.ForegroundColor = ConsoleColor.White;
             if (pair.firstValue == true&&pair.secondValue == true)
             {
-                //Call on Admin Menu
+                AdminMenu();
             }
             else
             {
@@ -667,7 +688,7 @@ namespace VendingMachine
         //-----------------------
 
         public static string connString = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
-        public static string csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
+        public static string csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Items;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
 
         //-----------------------
 
@@ -677,6 +698,7 @@ namespace VendingMachine
             var csAdmin = "Host=ragged-mummy-11407.8nj.cockroachlabs.cloud;Port=26257;Database=Admins;Username=aq232596_aquinas_ac_;Password=72eg0Wd7zpeV1TLCwAqr2A;SSL Mode=Prefer;Trust Server Certificate=true";
 
             Menu();
+
 
 
             Console.ReadKey();

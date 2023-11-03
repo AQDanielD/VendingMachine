@@ -127,6 +127,8 @@ namespace VendingMachine
         {
             Console.Clear();
             Basket.Clear();
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.BackgroundColor = ConsoleColor.Black;
             Menu();
         }
 
